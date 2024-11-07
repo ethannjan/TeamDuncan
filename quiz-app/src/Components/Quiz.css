@@ -50,12 +50,13 @@ font-weight: 500;
     font-size: 18px;
 }
 
-.correct{
-    background: white;
-    border-color: green;
-}
-
-.wrong{
-    background: white;
-    border-color: red;
-}
+.correct {
+    background-color: green;
+    color: white;
+  }
+  
+  .wrong {
+    background-color: red;
+    color: white;
+  }
+  
