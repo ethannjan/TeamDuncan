@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { auth } from '../firebaseConfig';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 const Signup = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
-    if (username && password) {
-      // You might want to save user credentials here in a state, context, or local storage.
+    try {
+      await createUserWithEmailAndPassword(auth, username, password);
+      // Redirect to login page after successful signup
       navigate('/login');
-    } else {
-      alert('Please fill out all fields');
+    } catch (error) {
+      alert('Error signing up: ' + error.message);
     }
   };
 
@@ -22,11 +25,11 @@ const Signup = () => {
       <form onSubmit={handleSignup}>
         <label>
           Username:
-          <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} />
+          <input type="email" value={username} onChange={(e) => setUsername(e.target.value)} required />
         </label>
         <label>
           Password:
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
         <button type="submit">Sign Up</button>
       </form>

@@ -1,18 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { auth } from '../firebaseConfig';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (username && password) {
-      // Check credentials (using saved credentials if applicable)
+    try {
+      await signInWithEmailAndPassword(auth, username, password);
+      // Redirect to quiz page after successful login
       navigate('/quiz');
-    } else {
-      alert('Please enter username and password');
+    } catch (error) {
+      alert('Error logging in: ' + error.message);
     }
   };
 
@@ -22,13 +25,13 @@ const Login = () => {
       <form onSubmit={handleLogin}>
         <label>
           Username:
-          <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} />
+          <input type="email" value={username} onChange={(e) => setUsername(e.target.value)} required />
         </label>
         <label>
           Password:
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
-        <button type="submit">Log In</button>
+        <button type="submit">Login</button>
       </form>
     </div>
   );
