@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../firebaseConfig';
 import { collection, getDocs } from 'firebase/firestore';
-
+import { doc, updateDoc } from 'firebase/firestore';
+import { doc, deleteDoc } from 'firebase/firestore';
 const QuestionList = () => {
   const [questions, setQuestions] = useState([]);
 
@@ -13,6 +14,19 @@ const QuestionList = () => {
     };
     fetchQuestions();
   }, []);
+
+
+const handleUpdateQuestion = async (id, updatedData) => {
+  const questionRef = doc(db, 'questions', id);
+  await updateDoc(questionRef, updatedData);
+  alert('Question updated');
+};
+
+const handleDeleteQuestion = async (id) => {
+  const questionRef = doc(db, 'questions', id);
+  await deleteDoc(questionRef);
+  alert('Question deleted');
+};
 
   return (
     <div>

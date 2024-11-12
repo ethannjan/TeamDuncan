@@ -33,10 +33,11 @@ const Login = () => {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       const userData = userDoc.data();
 
+      // Navigate based on role
       if (userData.role === 'teacher') {
         navigate('/create-question');
       } else {
-        navigate('/quiz');
+        navigate('/answer-questions'); // Redirect students to the answer questions page
       }
     } catch (error) {
       setError(error.message);

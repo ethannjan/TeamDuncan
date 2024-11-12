@@ -6,6 +6,7 @@ import { collection, getDocs } from 'firebase/firestore';
 const AnswerQuestions = () => {
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
+  const [score, setScore] = useState(null);
 
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -18,6 +19,19 @@ const AnswerQuestions = () => {
 
   const handleAnswerChange = (questionId, answer) => {
     setAnswers({ ...answers, [questionId]: answer });
+  };
+
+  const handleSubmit = () => {
+    let calculatedScore = 0;
+  
+    questions.forEach((q) => {
+      // Convert q.answer to a number for comparison
+      if (answers[q.id] === parseInt(q.answer, 10)) {
+        calculatedScore += 1;
+      }
+    });
+  
+    setScore(calculatedScore);
   };
 
   return (
@@ -40,6 +54,14 @@ const AnswerQuestions = () => {
           ))}
         </div>
       ))}
+
+      <button onClick={handleSubmit}>Submit</button>
+
+      {score !== null && (
+        <div>
+          <h3>Your Score: {score} / {questions.length}</h3>
+        </div>
+      )}
     </div>
   );
 };
