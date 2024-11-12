@@ -24,7 +24,7 @@ const Signup = () => {
       <h1>Signup</h1>
       <form onSubmit={handleSignup}>
         <label>
-          Username:
+          email:
           <input type="email" value={username} onChange={(e) => setUsername(e.target.value)} required />
         </label>
         <label>

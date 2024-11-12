@@ -24,7 +24,7 @@ const Login = () => {
       <h1>Login</h1>
       <form onSubmit={handleLogin}>
         <label>
-          Username:
+          Email:
           <input type="email" value={username} onChange={(e) => setUsername(e.target.value)} required />
         </label>
         <label>
@@ -38,3 +38,6 @@ const Login = () => {
 };
 
 export default Login;
+
+
+
