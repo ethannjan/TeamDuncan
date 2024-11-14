@@ -85,7 +85,30 @@ const AnswerQuestions = () => {
             Quiz Time
           </Typography>
         </Box>
-        
+
+        {score !== null && (
+          <Box sx={{ mb: 4 }}>
+            <Alert 
+              severity={score === questions.length ? "success" : "info"}
+              sx={{ mb: 2 }}
+            >
+              <Typography variant="h6">
+                Your Score: {score} / {questions.length}
+              </Typography>
+              <Typography variant="body2">
+                {score === questions.length 
+                  ? "Perfect score! Excellent work!" 
+                  : "Keep practicing to improve your score!"}
+              </Typography>
+            </Alert>
+            <LinearProgress 
+              variant="determinate" 
+              value={(score / questions.length) * 100}
+              sx={{ height: 10, borderRadius: 5 }}
+            />
+          </Box>
+        )}
+
         <Divider sx={{ mb: 3 }} />
 
         {questions.map((q, questionIndex) => (
@@ -131,29 +154,6 @@ const AnswerQuestions = () => {
             Submit Quiz
           </Button>
         </Box>
-
-        {score !== null && (
-          <Box sx={{ mt: 4 }}>
-            <Alert 
-              severity={score === questions.length ? "success" : "info"}
-              sx={{ mb: 2 }}
-            >
-              <Typography variant="h6">
-                Your Score: {score} / {questions.length}
-              </Typography>
-              <Typography variant="body2">
-                {score === questions.length 
-                  ? "Perfect score! Excellent work!" 
-                  : "Keep practicing to improve your score!"}
-              </Typography>
-            </Alert>
-            <LinearProgress 
-              variant="determinate" 
-              value={(score / questions.length) * 100}
-              sx={{ height: 10, borderRadius: 5 }}
-            />
-          </Box>
-        )}
       </Paper>
     </Container>
   );
