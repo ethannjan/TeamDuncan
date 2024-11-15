@@ -1,21 +1,28 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Quiz.css';
 import { data } from '../assets/data';
 
 const Quiz = () => {
-  const [index, setIndex] = useState(0);  // Start with the first question (index 0)
+  const [index, setIndex] = useState(0);
   const [question, setQuestion] = useState(data[index]);
   const [lock, setLock] = useState(false);
   const [score, setScore] = useState(0);
   const [result, setResult] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(10);  // Timer set to 10 seconds
+  const [timeLeft, setTimeLeft] = useState(10);
+  const [email, setEmail] = useState('');  // Add state for email input
+
+  const navigate = useNavigate();
 
   const Option1 = useRef(null);
   const Option2 = useRef(null);
   const Option3 = useRef(null);
   const Option4 = useRef(null);
-
   const option_array = [Option1, Option2, Option3, Option4];
+
+  const handleEmailChange = (e) => {
+    setEmail(e.target.value);
+  };
 
   const checkAns = (e, ans) => {
     if (!lock) {
@@ -31,7 +38,7 @@ const Quiz = () => {
   };
 
   const next = () => {
-    if (lock || timeLeft === 0) {  // Move to next if locked or time is up
+    if (lock || timeLeft === 0) {
       if (index === data.length - 1) {
         setResult(true);
         return;
@@ -39,7 +46,7 @@ const Quiz = () => {
       setIndex((prevIndex) => {
         const nextIndex = prevIndex + 1;
         setQuestion(data[nextIndex]);
-        setTimeLeft(10);  // Reset timer for the next question
+        setTimeLeft(10);
         return nextIndex;
       });
       setLock(false);
@@ -59,27 +66,50 @@ const Quiz = () => {
     setTimeLeft(10);
   };
 
+  const finishQuiz = () => {
+    // Save the score and email in local storage
+    const leaderboardScores = JSON.parse(localStorage.getItem('leaderboardScores')) || [];
+    leaderboardScores.push({ email, score });
+    localStorage.setItem('leaderboardScores', JSON.stringify(leaderboardScores));
+
+    // Navigate to LeaderboardPage and pass the score and email via location state
+    navigate('/leaderboard', { state: { score, email } });
+  };
+
+  useEffect(() => {
+    if (result) {
+      finishQuiz();
+    }
+  }, [result]);
+
   // Timer effect
   useEffect(() => {
-    if (result || lock) return;  // Stop timer if quiz is over or question is locked
+    if (result || lock) return;
     const timer = setInterval(() => {
       setTimeLeft((prevTime) => {
         if (prevTime === 1) {
-          clearInterval(timer); // Clear interval at the end
-          next();                // Automatically go to next question
-          return 10;             // Reset time (for next question)
+          clearInterval(timer);
+          next();
+          return 10;
         }
         return prevTime - 1;
       });
     }, 1000);
-    return () => clearInterval(timer);  // Clear interval on component unmount or question change
+    return () => clearInterval(timer);
   }, [timeLeft, lock, result]);
 
   return (
     <div className="container">
       <h1>Quiz App</h1>
       <hr />
-      {result ? (
+      {!email ? (
+        <div>
+          <label>
+            Enter your email:
+            <input type="email" value={email} onChange={handleEmailChange} required />
+          </label>
+        </div>
+      ) : result ? (
         <>
           <h2>You Scored {score} out of {data.length}</h2>
           <button onClick={reset}>Reset</button>

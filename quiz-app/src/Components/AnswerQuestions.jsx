@@ -1,6 +1,8 @@
+// src/components/AnswerQuestions.jsx
 import React, { useState, useEffect } from 'react';
 import { db } from '../firebaseConfig';
 import { collection, getDocs } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import {
   Container,
   Paper,
@@ -13,17 +15,21 @@ import {
   Card,
   CardContent,
   LinearProgress,
-  Alert,
   Divider,
 } from '@mui/material';
 import QuizIcon from '@mui/icons-material/Quiz';
+import { useNavigate } from 'react-router-dom';
 
 const AnswerQuestions = () => {
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
-  const [score, setScore] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const navigate = useNavigate();
+
+  // Retrieve the authenticated user's email
+  const auth = getAuth();
+  const user = auth.currentUser;
+  const userEmail = user ? user.email : "Guest";  // Default to "Guest" if not logged in
 
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -33,7 +39,7 @@ const AnswerQuestions = () => {
         setQuestions(querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
         setLoading(false);
       } catch (err) {
-        setError('Failed to load questions. Please try again later.');
+        console.error("Failed to load questions:", err);
         setLoading(false);
       }
     };
@@ -51,7 +57,14 @@ const AnswerQuestions = () => {
         calculatedScore += 1;
       }
     });
-    setScore(calculatedScore);
+
+    // Save the email and score to local storage for the leaderboard
+    const scores = JSON.parse(localStorage.getItem('leaderboardScores')) || [];
+    scores.push({ email: userEmail, score: calculatedScore });
+    localStorage.setItem('leaderboardScores', JSON.stringify(scores));
+
+    // Redirect to LeaderboardPage and pass the score
+    navigate('/leaderboard', { state: { score: calculatedScore, email: userEmail } });
   };
 
   const isAllAnswered = questions.length > 0 && 
@@ -68,14 +81,6 @@ const AnswerQuestions = () => {
     );
   }
 
-  if (error) {
-    return (
-      <Container maxWidth="md" sx={{ mt: 4 }}>
-        <Alert severity="error">{error}</Alert>
-      </Container>
-    );
-  }
-
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: 3 }}>
@@ -85,29 +90,6 @@ const AnswerQuestions = () => {
             Quiz Time
           </Typography>
         </Box>
-
-        {score !== null && (
-          <Box sx={{ mb: 4 }}>
-            <Alert 
-              severity={score === questions.length ? "success" : "info"}
-              sx={{ mb: 2 }}
-            >
-              <Typography variant="h6">
-                Your Score: {score} / {questions.length}
-              </Typography>
-              <Typography variant="body2">
-                {score === questions.length 
-                  ? "Perfect score! Excellent work!" 
-                  : "Keep practicing to improve your score!"}
-              </Typography>
-            </Alert>
-            <LinearProgress 
-              variant="determinate" 
-              value={(score / questions.length) * 100}
-              sx={{ height: 10, borderRadius: 5 }}
-            />
-          </Box>
-        )}
 
         <Divider sx={{ mb: 3 }} />
 
@@ -131,11 +113,6 @@ const AnswerQuestions = () => {
                     value={index}
                     control={<Radio />}
                     label={option}
-                    sx={{
-                      '&:hover': {
-                        backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                      },
-                    }}
                   />
                 ))}
               </RadioGroup>
