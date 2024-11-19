@@ -3,27 +3,29 @@ import { db } from '../firebaseConfig';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import {
-  Container,
-  Paper,
-  Typography,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  Button,
+  Alert,
   Box,
+  Button,
   Card,
   CardContent,
-  LinearProgress,
+  Container,
   Divider,
-  Alert,
-  Select,
-  MenuItem,
   FormControl,
+  FormControlLabel,
   InputLabel,
+  LinearProgress,
+  MenuItem,
+  Paper,
+  Radio,
+  RadioGroup,
+  Select,
+  Typography
 } from '@mui/material';
 import QuizIcon from '@mui/icons-material/Quiz';
 import TimerIcon from '@mui/icons-material/Timer';
 import FolderIcon from '@mui/icons-material/Folder';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
 import { useNavigate } from 'react-router-dom';
 
 const AnswerQuestions = () => {
@@ -36,13 +38,15 @@ const AnswerQuestions = () => {
   const [quizStarted, setQuizStarted] = useState(false);
   const [timeWarning, setTimeWarning] = useState(false);
   const [moduleSelected, setModuleSelected] = useState(false);
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [reviewMode, setReviewMode] = useState(false);
+  const [score, setScore] = useState(0);
   const navigate = useNavigate();
 
   const auth = getAuth();
   const user = auth.currentUser;
   const userEmail = user ? user.email : "Guest";
 
-  // Fetch available modules
   useEffect(() => {
     const fetchModules = async () => {
       try {
@@ -62,7 +66,6 @@ const AnswerQuestions = () => {
     fetchModules();
   }, []);
 
-  // Fetch questions for selected module
   useEffect(() => {
     const fetchQuestions = async () => {
       if (!selectedModule) return;
@@ -75,7 +78,6 @@ const AnswerQuestions = () => {
         const fetchedQuestions = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         setQuestions(fetchedQuestions);
         
-        // Get time limit from the first question
         if (fetchedQuestions.length > 0 && fetchedQuestions[0].timeLimit) {
           setTimeLeft(fetchedQuestions[0].timeLimit * 60);
         }
@@ -92,9 +94,8 @@ const AnswerQuestions = () => {
     }
   }, [selectedModule]);
 
-  // Timer functionality
   useEffect(() => {
-    if (!quizStarted || timeLeft === null) return;
+    if (!quizStarted || timeLeft === null || quizSubmitted) return;
 
     const timerInterval = setInterval(() => {
       setTimeLeft((prevTime) => {
@@ -113,7 +114,7 @@ const AnswerQuestions = () => {
     }, 1000);
 
     return () => clearInterval(timerInterval);
-  }, [quizStarted, timeWarning]);
+  }, [quizStarted, timeWarning, quizSubmitted]);
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
@@ -141,6 +142,7 @@ const AnswerQuestions = () => {
         calculatedScore += 1;
       }
     });
+    setScore(calculatedScore);
 
     const scores = JSON.parse(localStorage.getItem('leaderboardScores')) || [];
     const selectedModuleName = modules.find(m => m.id === selectedModule)?.name || 'Unknown Module';
@@ -153,18 +155,78 @@ const AnswerQuestions = () => {
     });
     localStorage.setItem('leaderboardScores', JSON.stringify(scores));
 
-    navigate('/leaderboard', { 
-      state: { 
-        score: calculatedScore,
-        email: userEmail,
-        module: selectedModuleName,
-        totalQuestions: questions.length
-      }
-    });
+    setQuizSubmitted(true);
+    setReviewMode(true);
   };
 
-  const isAllAnswered = questions.length > 0 && 
-    questions.every(q => answers[q.id] !== undefined);
+  const QuestionReview = ({ question, index, userAnswer }) => {
+    const isCorrect = userAnswer === parseInt(question.answer, 10);
+    
+    return (
+      <Card sx={{ mb: 2, backgroundColor: '#f8f9fa' }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+            <Box sx={{ flexGrow: 1 }}>
+              <Typography variant="h6" gutterBottom>
+                Question {index + 1}:
+              </Typography>
+              <Typography sx={{ mb: 2 }}>
+                {question.questionText}
+              </Typography>
+              
+              <Box sx={{ pl: 2 }}>
+                {question.options.map((option, optIndex) => (
+                  <Box 
+                    key={optIndex}
+                    sx={{
+                      mb: 1,
+                      p: 1,
+                      borderRadius: 1,
+                      backgroundColor: 
+                        optIndex === parseInt(question.answer, 10)
+                          ? '#e8f5e9'
+                          : userAnswer === optIndex && userAnswer !== parseInt(question.answer, 10)
+                          ? '#ffebee'
+                          : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }}
+                  >
+                    <Typography>
+                      {option}
+                    </Typography>
+                    {optIndex === parseInt(question.answer, 10) && (
+                      <CheckCircleIcon sx={{ color: 'success.main', fontSize: 20 }} />
+                    )}
+                    {userAnswer === optIndex && userAnswer !== parseInt(question.answer, 10) && (
+                      <CancelIcon sx={{ color: 'error.main', fontSize: 20 }} />
+                    )}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+            <Box sx={{ mt: 1 }}>
+              {isCorrect ? (
+                <CheckCircleIcon sx={{ color: 'success.main', fontSize: 28 }} />
+              ) : (
+                <CancelIcon sx={{ color: 'error.main', fontSize: 28 }} />
+              )}
+            </Box>
+          </Box>
+          
+          {!isCorrect && (
+            <Box sx={{ mt: 2, p: 2, bgcolor: '#e3f2fd', borderRadius: 1 }}>
+              <Typography sx={{ fontWeight: 600, mb: 1 }}>Explanation:</Typography>
+              <Typography>
+                {question.explanation || "The correct answer is option " + (parseInt(question.answer, 10) + 1)}
+              </Typography>
+            </Box>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (loading) {
     return (
@@ -181,7 +243,7 @@ const AnswerQuestions = () => {
     return (
       <Container maxWidth="md" sx={{ mt: 4 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
-          <Box display="flex" alignItems="center" gap={2} mb={4}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
             <FolderIcon color="primary" sx={{ fontSize: 40 }} />
             <Typography variant="h4">
               Select a Module
@@ -202,10 +264,54 @@ const AnswerQuestions = () => {
               ))}
             </Select>
           </FormControl>
+        </Paper>
+      </Container>
+    );
+  }
 
-          <Typography variant="body1" color="text.secondary" align="center">
-            Select a module to begin the quiz
-          </Typography>
+  if (quizSubmitted && reviewMode) {
+    return (
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Paper elevation={3} sx={{ p: 3 }}>
+          <Box sx={{ mb: 4, textAlign: 'center' }}>
+            <Typography variant="h4" gutterBottom>Quiz Results</Typography>
+            <Typography variant="h5" sx={{ color: 'primary.main' }}>
+              Score: {score} out of {questions.length} ({Math.round(score/questions.length * 100)}%)
+            </Typography>
+          </Box>
+          
+          <Divider sx={{ mb: 4 }} />
+          
+          {questions.map((question, index) => (
+            <QuestionReview 
+              key={question.id}
+              question={question}
+              index={index}
+              userAnswer={answers[question.id]}
+            />
+          ))}
+          
+          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 2 }}>
+            <Button
+              variant="outlined"
+              onClick={() => navigate('/leaderboard')}
+            >
+              View Leaderboard
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => {
+                setQuizSubmitted(false);
+                setReviewMode(false);
+                setModuleSelected(false);
+                setSelectedModule('');
+                setAnswers({});
+                setQuizStarted(false);
+              }}
+            >
+              Take Another Quiz
+            </Button>
+          </Box>
         </Paper>
       </Container>
     );
@@ -237,22 +343,23 @@ const AnswerQuestions = () => {
     );
   }
 
+  const isAllAnswered = questions.length > 0 && 
+    questions.every(q => answers[q.id] !== undefined);
+
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: 3 }}>
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
-          <Box display="flex" alignItems="center" gap={2}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <QuizIcon color="primary" sx={{ fontSize: 40 }} />
             <Box>
-              <Typography variant="h4" component="h1">
-                Quiz Time
-              </Typography>
+              <Typography variant="h4">Quiz Time</Typography>
               <Typography variant="subtitle1" color="text.secondary">
                 {modules.find(m => m.id === selectedModule)?.name}
               </Typography>
             </Box>
           </Box>
-          <Box display="flex" alignItems="center" gap={1}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <TimerIcon color={timeWarning ? "error" : "primary"} />
             <Typography 
               variant="h5" 
@@ -272,11 +379,11 @@ const AnswerQuestions = () => {
 
         <Divider sx={{ mb: 3 }} />
 
-        {questions.map((q, questionIndex) => (
+        {questions.map((q, index) => (
           <Card key={q.id} sx={{ mb: 3, backgroundColor: '#f8f9fa' }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Question {questionIndex + 1}:
+                Question {index + 1}:
               </Typography>
               <Typography variant="body1" gutterBottom>
                 {q.questionText}
