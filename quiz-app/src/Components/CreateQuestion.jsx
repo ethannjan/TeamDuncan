@@ -10,15 +10,22 @@ import {
   Grid,
   IconButton,
   Snackbar,
-  Alert
+  Alert,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import TimerIcon from '@mui/icons-material/Timer';
 
 const CreateQuestion = () => {
   const [questions, setQuestions] = useState([]);
-  const [newQuestion, setNewQuestion] = useState({ questionText: '', options: ['', '', '', ''], answer: '' });
+  const [newQuestion, setNewQuestion] = useState({
+    questionText: '',
+    options: ['', '', '', ''],
+    answer: '',
+  });
+  const [quizTime, setQuizTime] = useState(''); // Time in minutes
   const [error, setError] = useState('');
+  const [currentEdit, setCurrentEdit] = useState(null);
 
   const questionsCollection = collection(db, 'questions');
 
@@ -26,9 +33,10 @@ const CreateQuestion = () => {
     const fetchQuestions = async () => {
       try {
         const querySnapshot = await getDocs(questionsCollection);
-        setQuestions(querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+        setQuestions(querySnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id })));
       } catch (error) {
         console.error('Error fetching questions:', error);
+        setError('Failed to fetch questions');
       }
     };
     fetchQuestions();
@@ -39,7 +47,7 @@ const CreateQuestion = () => {
       setError('Please enter a question text');
       return;
     }
-    if (newQuestion.options.some(option => option.trim() === '')) {
+    if (newQuestion.options.some((option) => option.trim() === '')) {
       setError('Please fill in all options');
       return;
     }
@@ -49,7 +57,12 @@ const CreateQuestion = () => {
     }
 
     try {
-      await addDoc(questionsCollection, newQuestion);
+      const docRef = await addDoc(questionsCollection, {
+        ...newQuestion,
+        timeLimit: quizTime ? parseInt(quizTime) : null // Store time limit with question
+      });
+      
+      setQuestions([...questions, { ...newQuestion, id: docRef.id }]);
       setNewQuestion({ questionText: '', options: ['', '', '', ''], answer: '' });
       setError('');
     } catch (error) {
@@ -58,21 +71,26 @@ const CreateQuestion = () => {
     }
   };
 
-  const updateQuestion = async (id, updatedQuestion) => {
-    try {
-      const questionDoc = doc(db, 'questions', id);
-      await updateDoc(questionDoc, updatedQuestion);
-    } catch (error) {
-      console.error('Error updating question:', error);
+  const saveQuizTime = async () => {
+    if (!quizTime || isNaN(quizTime) || parseInt(quizTime) <= 0) {
+      setError('Please enter a valid time in minutes');
+      return;
     }
-  };
 
-  const deleteQuestion = async (id) => {
     try {
-      const questionDoc = doc(db, 'questions', id);
-      await deleteDoc(questionDoc);
+      // Update all questions with the quiz time
+      const updatePromises = questions.map(question => {
+        const questionDoc = doc(db, 'questions', question.id);
+        return updateDoc(questionDoc, { timeLimit: parseInt(quizTime) });
+      });
+
+      await Promise.all(updatePromises);
+      setError('');
+      // Show success message
+      alert(`Quiz time limit set to ${quizTime} minutes`);
     } catch (error) {
-      console.error('Error deleting question:', error);
+      console.error('Error saving quiz time:', error);
+      setError('Failed to save quiz time. Please try again.');
     }
   };
 
@@ -82,18 +100,6 @@ const CreateQuestion = () => {
         <Typography variant="h4" gutterBottom>
           Create Question
         </Typography>
-
-        {error && (
-          <Snackbar
-            open={Boolean(error)}
-            autoHideDuration={4000}
-            onClose={() => setError('')}
-          >
-            <Alert severity="error" onClose={() => setError('')}>
-              {error}
-            </Alert>
-          </Snackbar>
-        )}
 
         <Grid container spacing={2}>
           <Grid item xs={12}>
@@ -132,7 +138,7 @@ const CreateQuestion = () => {
             />
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12}>
             <Button
               variant="contained"
               color="primary"
@@ -145,38 +151,48 @@ const CreateQuestion = () => {
         </Grid>
       </Paper>
 
+      {/* Timer Setting Section */}
       <Paper elevation={3} sx={{ p: 3, mt: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Existing Questions
+        <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <TimerIcon /> Set Quiz Timer
         </Typography>
-
-        {questions.map((q) => (
-          <Paper key={q.id} elevation={2} sx={{ p: 2, mb: 2 }}>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={8}>
-                <Typography variant="body1">{q.questionText}</Typography>
-              </Grid>
-              <Grid item xs={2}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => updateQuestion(q.id, q)}
-                >
-                  Update
-                </Button>
-              </Grid>
-              <Grid item xs={2}>
-                <IconButton
-                  color="error"
-                  onClick={() => deleteQuestion(q.id)}
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </Grid>
-            </Grid>
-          </Paper>
-        ))}
+        
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} md={6}>
+            <TextField
+              label="Quiz Time (minutes)"
+              type="number"
+              variant="outlined"
+              fullWidth
+              value={quizTime}
+              onChange={(e) => setQuizTime(e.target.value)}
+              inputProps={{ min: 1 }}
+            />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={saveQuizTime}
+              startIcon={<TimerIcon />}
+            >
+              Set Quiz Time
+            </Button>
+          </Grid>
+        </Grid>
       </Paper>
+
+      {error && (
+        <Snackbar
+          open={Boolean(error)}
+          autoHideDuration={4000}
+          onClose={() => setError('')}
+        >
+          <Alert severity="error" onClose={() => setError('')}>
+            {error}
+          </Alert>
+        </Snackbar>
+      )}
     </Container>
   );
 };
