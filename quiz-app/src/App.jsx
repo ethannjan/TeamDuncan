@@ -1,22 +1,19 @@
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import Signup from './Components/Signup';
-import Quiz from './Components/Quiz';
-import Login from './Components/Login';
-import CreateQuestion from './Components/CreateQuestion';
-import AnswerQuestions from './Components/AnswerQuestions';
-import LeaderboardPage from './Components/LeaderboardPage'; // Import LeaderboardPage
+import React from "react";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import Signup from "./Components/Signup.jsx";
+import Login from "./Components/Login.jsx";
+import Homepage from "./Components/Homepage.jsx";
+
 
 const App = () => {
   return (
     <Router>
       <Routes>
+        {/* Route for the sign-up page */}
         <Route path="/" element={<Signup />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/quiz" element={<Quiz />} />
-        <Route path="/create-question" element={<CreateQuestion />} />
-        <Route path="/answer-questions" element={<AnswerQuestions />} /> {/* Route for answering questions */}
-        <Route path="/leaderboard" element={<LeaderboardPage />} /> {/* New route for the leaderboard */}
+        <Route path="/homepage" element={<Homepage />} />
+
       </Routes>
     </Router>
   );

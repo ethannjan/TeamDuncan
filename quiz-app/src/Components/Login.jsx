@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth, db } from '../firebaseConfig';
+import { auth, db } from '../firebaseConfig'; // Ensure firebaseConfig is correctly set up
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import {
@@ -11,7 +11,7 @@ import {
   Button,
   Paper,
   Avatar,
-  CssBaseline
+  CssBaseline,
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 
@@ -23,24 +23,30 @@ const Login = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError('');
-    
+    setError(''); // Clear previous errors
+
     try {
+      // Sign in with Firebase Authentication
       const userCredential = await signInWithEmailAndPassword(auth, username, password);
       const user = userCredential.user;
 
-      // Fetch user role from Firestore
+      // Fetch user data from Firestore
       const userDoc = await getDoc(doc(db, 'users', user.uid));
-      const userData = userDoc.data();
-
-      // Navigate based on role
-      if (userData.role === 'teacher') {
-        navigate('/create-question');
-      } else {
-        navigate('/answer-questions'); // Redirect students to the answer questions page
+      if (!userDoc.exists()) {
+        throw new Error('User data not found.');
       }
+
+      // Get user role from Firestore data
+      const userData = userDoc.data();
+      const userRole = userData.role; // Assuming 'role' is a field in Firestore (either 'teacher' or 'student')
+
+      // Store user role in localStorage
+      localStorage.setItem('userRole', userRole);
+
+      // Navigate to the homepage based on the role
+      navigate('/homepage');
     } catch (error) {
-      setError(error.message);
+      setError(error.message); // Display error message to the user
     }
   };
 
@@ -68,7 +74,7 @@ const Login = () => {
           <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
             <LockOutlinedIcon />
           </Avatar>
-          
+
           <Typography component="h1" variant="h5" sx={{ mb: 3 }}>
             Sign In
           </Typography>
@@ -87,7 +93,7 @@ const Login = () => {
               onChange={(e) => setUsername(e.target.value)}
               error={Boolean(error)}
             />
-            
+
             <TextField
               margin="normal"
               required
