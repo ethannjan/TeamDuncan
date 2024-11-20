@@ -1,134 +1,205 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './Quiz.css';
-import { data } from '../assets/data';
+import {
+  TextField,
+  Button,
+  Box,
+  Typography,
+  Paper,
+  Radio,
+  Checkbox,
+  FormControl,
+  FormControlLabel,
+  RadioGroup,
+} from '@mui/material';
+import { db } from '../firebaseConfig';
+import { collection, getDocs } from 'firebase/firestore';
 
 const Quiz = () => {
+  const [quizzes, setQuizzes] = useState([]);
+  const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [index, setIndex] = useState(0);
-  const [question, setQuestion] = useState(data[index]);
+  const [question, setQuestion] = useState(null);
+  const [selectedAnswer, setSelectedAnswer] = useState('');
   const [lock, setLock] = useState(false);
   const [score, setScore] = useState(0);
   const [result, setResult] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(10);
-  const [email, setEmail] = useState('');  // Add state for email input
+  const [timeSpent, setTimeSpent] = useState(0); // Start time at 0 for stopwatch
 
   const navigate = useNavigate();
 
-  const Option1 = useRef(null);
-  const Option2 = useRef(null);
-  const Option3 = useRef(null);
-  const Option4 = useRef(null);
-  const option_array = [Option1, Option2, Option3, Option4];
+  // Fetch quizzes from Firestore
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      const querySnapshot = await getDocs(collection(db, 'quizzes'));
+      const quizData = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setQuizzes(quizData);
+    };
 
-  const handleEmailChange = (e) => {
-    setEmail(e.target.value);
+    fetchQuizzes();
+  }, []);
+
+  // Stopwatch effect
+  useEffect(() => {
+    if (result || lock) return;
+
+    const stopwatch = setInterval(() => {
+      setTimeSpent((prevTime) => prevTime + 1); // Increment the time by 1 second
+    }, 1000);
+
+    return () => clearInterval(stopwatch); // Cleanup the interval when component unmounts or dependencies change
+  }, [lock, result]); // Only watch for `lock` and `result` changes
+
+  // Start selected quiz
+  const startQuiz = (quiz) => {
+    if (!quiz.questions || quiz.questions.length === 0) {
+      alert('This quiz has no questions.');
+      return;
+    }
+    setSelectedQuiz(quiz);
+    setIndex(0);
+    setQuestion(quiz.questions[0]);
+    setTimeSpent(0); // Reset stopwatch when quiz starts
+    setScore(0);
   };
 
-  const checkAns = (e, ans) => {
+  const handleAnswerChange = (e, optionIndex) => {
+    if (question.type === 'multipleChoiceMultiple') {
+      const updatedAnswers = selectedAnswer.includes(optionIndex)
+        ? selectedAnswer.filter((idx) => idx !== optionIndex)
+        : [...selectedAnswer, optionIndex];
+      setSelectedAnswer(updatedAnswers);
+    } else {
+      setSelectedAnswer(e.target.value);
+    }
+  };
+
+  const checkAnswer = () => {
     if (!lock) {
-      if (question.ans === ans) {
-        e.target.classList.add("correct");
-        setScore(prev => prev + 1);
+      let isCorrect = false;
+      if (question.type === 'multipleChoiceMultiple') {
+        const correctAnswers = question.answer.sort();
+        const userAnswers = selectedAnswer.sort();
+        isCorrect = JSON.stringify(correctAnswers) === JSON.stringify(userAnswers);
       } else {
-        e.target.classList.add("wrong");
+        isCorrect = question.answer.toString() === selectedAnswer.toString();
       }
+
+      if (isCorrect) setScore((prevScore) => prevScore + 1);
       setLock(true);
-      option_array[question.ans - 1].current.classList.add("correct");
     }
   };
 
   const next = () => {
-    if (lock || timeLeft === 0) {
-      if (index === data.length - 1) {
+    if (lock || timeSpent === 0) {
+      if (index === selectedQuiz.questions.length - 1) {
         setResult(true);
         return;
       }
       setIndex((prevIndex) => {
         const nextIndex = prevIndex + 1;
-        setQuestion(data[nextIndex]);
-        setTimeLeft(10);
+        setQuestion(selectedQuiz.questions[nextIndex]);
+        setTimeSpent(0); // Reset stopwatch for next question
+        setSelectedAnswer('');
+        setLock(false);
         return nextIndex;
-      });
-      setLock(false);
-      option_array.forEach((option) => {
-        option.current.classList.remove("wrong");
-        option.current.classList.remove("correct");
       });
     }
   };
 
   const reset = () => {
+    setSelectedQuiz(null);
     setIndex(0);
-    setQuestion(data[0]);
+    setQuestion(null);
     setScore(0);
     setLock(false);
     setResult(false);
-    setTimeLeft(10);
+    setTimeSpent(0); // Reset stopwatch when quiz is reset
+    setSelectedAnswer('');
   };
 
-  const finishQuiz = () => {
-    // Save the score and email in local storage
-    const leaderboardScores = JSON.parse(localStorage.getItem('leaderboardScores')) || [];
-    leaderboardScores.push({ email, score });
-    localStorage.setItem('leaderboardScores', JSON.stringify(leaderboardScores));
-
-    // Navigate to LeaderboardPage and pass the score and email via location state
-    navigate('/leaderboard', { state: { score, email } });
-  };
-
-  useEffect(() => {
-    if (result) {
-      finishQuiz();
-    }
-  }, [result]);
-
-  // Timer effect
-  useEffect(() => {
-    if (result || lock) return;
-    const timer = setInterval(() => {
-      setTimeLeft((prevTime) => {
-        if (prevTime === 1) {
-          clearInterval(timer);
-          next();
-          return 10;
-        }
-        return prevTime - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [timeLeft, lock, result]);
+  if (!selectedQuiz) {
+    return (
+      <Box sx={{ maxWidth: 600, mx: 'auto', p: 3 }}>
+        <Typography variant="h4" gutterBottom>Select a Quiz</Typography>
+        {quizzes.map((quiz) => (
+          <Button
+            key={quiz.id}
+            variant="contained"
+            sx={{ mt: 2, width: '100%' }}
+            onClick={() => startQuiz(quiz)}
+          >
+            {quiz.quizName} - {quiz.subject}
+          </Button>
+        ))}
+      </Box>
+    );
+  }
 
   return (
-    <div className="container">
-      <h1>Quiz App</h1>
-      <hr />
-      {!email ? (
-        <div>
-          <label>
-            Enter your email:
-            <input type="email" value={email} onChange={handleEmailChange} required />
-          </label>
-        </div>
-      ) : result ? (
-        <>
-          <h2>You Scored {score} out of {data.length}</h2>
-          <button onClick={reset}>Reset</button>
-        </>
-      ) : (
-        <>
-          <h2>{index + 1}. {question.question}</h2>
-          <ul>
-            <li ref={Option1} onClick={(e) => checkAns(e, 1)}>{question.option1}</li>
-            <li ref={Option2} onClick={(e) => checkAns(e, 2)}>{question.option2}</li>
-            <li ref={Option3} onClick={(e) => checkAns(e, 3)}>{question.option3}</li>
-            <li ref={Option4} onClick={(e) => checkAns(e, 4)}>{question.option4}</li>
-          </ul>
-          <button onClick={next}>Next</button>
-          <div className="index">{index + 1} of {data.length} questions</div>
-          <div className="timer">Time Left: {timeLeft} seconds</div>
-        </>
-      )}
-    </div>
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: 600, mx: 'auto', p: 3 }}>
+      <Paper sx={{ p: 4, width: '100%', mb: 3 }}>
+        <Typography variant="h4" gutterBottom>{selectedQuiz.quizName}</Typography>
+
+        {result ? (
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="h5">You scored {score} out of {selectedQuiz.questions.length}</Typography>
+            <Button variant="contained" onClick={reset} sx={{ mt: 2 }}>
+              Reset Quiz
+            </Button>
+          </Box>
+        ) : (
+          <Box>
+            <Typography variant="h5" sx={{ mb: 3 }}>{index + 1}. {question.questionText}</Typography>
+
+            {question.type === 'multipleChoice' || question.type === 'multipleChoiceMultiple' ? (
+              <FormControl component="fieldset">
+                {question.options.map((option, optIndex) => (
+                  <FormControlLabel
+                    key={optIndex}
+                    control={
+                      question.type === 'multipleChoiceMultiple' ? (
+                        <Checkbox
+                          checked={selectedAnswer.includes(optIndex)}
+                          onChange={(e) => handleAnswerChange(e, optIndex)}
+                        />
+                      ) : (
+                        <Radio
+                          checked={selectedAnswer.toString() === optIndex.toString()}
+                          onChange={() => setSelectedAnswer(optIndex.toString())}
+                        />
+                      )
+                    }
+                    label={option}
+                  />
+                ))}
+              </FormControl>
+            ) : question.type === 'trueFalse' ? (
+              <RadioGroup value={selectedAnswer} onChange={handleAnswerChange}>
+                <FormControlLabel value="true" control={<Radio />} label="True" />
+                <FormControlLabel value="false" control={<Radio />} label="False" />
+              </RadioGroup>
+            ) : question.type === 'identification' ? (
+              <TextField
+                label="Your Answer"
+                value={selectedAnswer}
+                onChange={(e) => setSelectedAnswer(e.target.value)}
+                fullWidth
+                margin="normal"
+              />
+            ) : null}
+
+            <Button variant="contained" onClick={checkAnswer} sx={{ mt: 3 }}>Submit Answer</Button>
+            <Button variant="contained" onClick={next} sx={{ mt: 3, ml: 2 }} disabled={!lock}>Next</Button>
+
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2">{index + 1} of {selectedQuiz.questions.length} questions</Typography>
+              <Typography variant="body2">Time Spent: {timeSpent} seconds</Typography>
+            </Box>
+          </Box>
+        )}
+      </Paper>
+    </Box>
   );
 };
 
