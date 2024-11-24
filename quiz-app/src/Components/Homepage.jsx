@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';  // Import useNavigate
+import { useNavigate } from 'react-router-dom'; 
 import TeacherDashboard from './TeacherDashboard';
 import Quiz from './Quiz';
-import './Homepage.css';  // Import the external CSS for styling
+import './Homepage.css';  
 
 const Homepage = () => {
   const [userRole, setUserRole] = useState(null);
 
-  // UseEffect to retrieve the user role from localStorage (or from an authentication service)
   useEffect(() => {
     const role = localStorage.getItem('userRole'); 
     if (role) {
@@ -42,9 +41,6 @@ const Homepage = () => {
           </div>
         )}
       </div>
-      
-      {/* Log Out Button */}
-      <button className="logout-btn" onClick={handleLogout}>Log Out</button>
     </div>
   );
 };

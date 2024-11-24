@@ -18,13 +18,14 @@ import { collection, getDocs } from 'firebase/firestore';
 const Quiz = () => {
   const [quizzes, setQuizzes] = useState([]);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
-  const [index, setIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [question, setQuestion] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState('');
-  const [lock, setLock] = useState(false);
+  const [selectedAnswersMultiple, setSelectedAnswersMultiple] = useState([]);
+  const [isLocked, setIsLocked] = useState(false);
   const [score, setScore] = useState(0);
-  const [result, setResult] = useState(false);
-  const [timeSpent, setTimeSpent] = useState(0); // Start time at 0 for stopwatch
+  const [quizCompleted, setQuizCompleted] = useState(false);
+  const [timeSpent, setTimeSpent] = useState(0); // Timer
 
   const navigate = useNavigate();
 
@@ -39,83 +40,95 @@ const Quiz = () => {
     fetchQuizzes();
   }, []);
 
-  // Stopwatch effect
+  // Timer for quiz
   useEffect(() => {
-    if (result || lock) return;
+    if (quizCompleted || isLocked) return;
 
-    const stopwatch = setInterval(() => {
-      setTimeSpent((prevTime) => prevTime + 1); // Increment the time by 1 second
+    const timer = setInterval(() => {
+      setTimeSpent((prevTime) => prevTime + 1);
     }, 1000);
 
-    return () => clearInterval(stopwatch); // Cleanup the interval when component unmounts or dependencies change
-  }, [lock, result]); // Only watch for `lock` and `result` changes
+    return () => clearInterval(timer);
+  }, [quizCompleted, isLocked]);
 
-  // Start selected quiz
   const startQuiz = (quiz) => {
     if (!quiz.questions || quiz.questions.length === 0) {
       alert('This quiz has no questions.');
       return;
     }
     setSelectedQuiz(quiz);
-    setIndex(0);
+    setCurrentIndex(0);
     setQuestion(quiz.questions[0]);
-    setTimeSpent(0); // Reset stopwatch when quiz starts
+    setTimeSpent(0);
     setScore(0);
+    setQuizCompleted(false);
   };
 
   const handleAnswerChange = (e, optionIndex) => {
     if (question.type === 'multipleChoiceMultiple') {
-      const updatedAnswers = selectedAnswer.includes(optionIndex)
-        ? selectedAnswer.filter((idx) => idx !== optionIndex)
-        : [...selectedAnswer, optionIndex];
-      setSelectedAnswer(updatedAnswers);
+      const updatedAnswers = selectedAnswersMultiple.includes(optionIndex)
+        ? selectedAnswersMultiple.filter((idx) => idx !== optionIndex)
+        : [...selectedAnswersMultiple, optionIndex];
+      setSelectedAnswersMultiple(updatedAnswers);
     } else {
       setSelectedAnswer(e.target.value);
     }
   };
+  
 
-  const checkAnswer = () => {
-    if (!lock) {
+  const validateAnswer = () => {
+    if (!isLocked) {
       let isCorrect = false;
-      if (question.type === 'multipleChoiceMultiple') {
-        const correctAnswers = question.answer.sort();
-        const userAnswers = selectedAnswer.sort();
-        isCorrect = JSON.stringify(correctAnswers) === JSON.stringify(userAnswers);
-      } else {
-        isCorrect = question.answer.toString() === selectedAnswer.toString();
+  
+      if (question.type === 'multipleChoice') {
+        // single answer question
+        isCorrect = question.answer === selectedAnswer;
+      } else if (question.type === 'multipleChoiceMultiple') {
+        // multiple answer question
+        const sortedCorrectAnswers = question.answer.split(',').map((item) => item.trim()).sort();
+        const sortedUserAnswers = selectedAnswersMultiple.sort();
+        isCorrect = JSON.stringify(sortedCorrectAnswers) === JSON.stringify(sortedUserAnswers);
+      } else if (question.type === 'trueFalse') {
+        isCorrect = question.answer.toString() === selectedAnswer.toLowerCase();
+      } else if (question.type === 'identification' || question.type === 'fillInTheBlanks') {
+        isCorrect = question.answer.trim().toLowerCase() === selectedAnswer.trim().toLowerCase();
       }
-
-      if (isCorrect) setScore((prevScore) => prevScore + 1);
-      setLock(true);
+  
+      if (isCorrect) {
+        setScore((prevScore) => prevScore + 1);
+      }
+      setIsLocked(true);
     }
   };
+  
 
-  const next = () => {
-    if (lock || timeSpent === 0) {
-      if (index === selectedQuiz.questions.length - 1) {
-        setResult(true);
+  const goToNextQuestion = () => {
+    if (isLocked) {
+      if (currentIndex === selectedQuiz.questions.length - 1) {
+        setQuizCompleted(true);
         return;
       }
-      setIndex((prevIndex) => {
+      setCurrentIndex((prevIndex) => {
         const nextIndex = prevIndex + 1;
         setQuestion(selectedQuiz.questions[nextIndex]);
-        setTimeSpent(0); // Reset stopwatch for next question
         setSelectedAnswer('');
-        setLock(false);
+        setSelectedAnswersMultiple([]);
+        setIsLocked(false);
         return nextIndex;
       });
     }
   };
 
-  const reset = () => {
+  const resetQuiz = () => {
     setSelectedQuiz(null);
-    setIndex(0);
+    setCurrentIndex(0);
     setQuestion(null);
     setScore(0);
-    setLock(false);
-    setResult(false);
-    setTimeSpent(0); // Reset stopwatch when quiz is reset
+    setIsLocked(false);
+    setQuizCompleted(false);
     setSelectedAnswer('');
+    setSelectedAnswersMultiple([]);
+    setTimeSpent(0);
   };
 
   if (!selectedQuiz) {
@@ -137,36 +150,39 @@ const Quiz = () => {
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: 600, mx: 'auto', p: 3 }}>
-      <Paper sx={{ p: 4, width: '100%', mb: 3 }}>
+    <Box sx={{ maxWidth: 600, mx: 'auto', p: 3 }}>
+      <Paper sx={{ p: 4, mb: 3 }}>
         <Typography variant="h4" gutterBottom>{selectedQuiz.quizName}</Typography>
-
-        {result ? (
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="h5">You scored {score} out of {selectedQuiz.questions.length}</Typography>
-            <Button variant="contained" onClick={reset} sx={{ mt: 2 }}>
-              Reset Quiz
+        {quizCompleted ? (
+          <Box textAlign="center">
+            <Typography variant="h5">
+              Quiz Completed! You scored {score} out of {selectedQuiz.questions.length}.
+            </Typography>
+            <Button variant="contained" onClick={resetQuiz} sx={{ mt: 3 }}>
+              Back to Quiz List
             </Button>
           </Box>
         ) : (
           <Box>
-            <Typography variant="h5" sx={{ mb: 3 }}>{index + 1}. {question.questionText}</Typography>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Question {currentIndex + 1}: {question.questionText}
+            </Typography>
 
             {question.type === 'multipleChoice' || question.type === 'multipleChoiceMultiple' ? (
-              <FormControl component="fieldset">
-                {question.options.map((option, optIndex) => (
+              <FormControl>
+                {question.options.map((option, index) => (
                   <FormControlLabel
-                    key={optIndex}
+                    key={index}
                     control={
                       question.type === 'multipleChoiceMultiple' ? (
                         <Checkbox
-                          checked={selectedAnswer.includes(optIndex)}
-                          onChange={(e) => handleAnswerChange(e, optIndex)}
+                          checked={selectedAnswersMultiple.includes(index)}
+                          onChange={(e) => handleAnswerChange(e, index)}
                         />
                       ) : (
                         <Radio
-                          checked={selectedAnswer.toString() === optIndex.toString()}
-                          onChange={() => setSelectedAnswer(optIndex.toString())}
+                          checked={selectedAnswer === index.toString()}
+                          onChange={() => setSelectedAnswer(index.toString())}
                         />
                       )
                     }
@@ -179,23 +195,26 @@ const Quiz = () => {
                 <FormControlLabel value="true" control={<Radio />} label="True" />
                 <FormControlLabel value="false" control={<Radio />} label="False" />
               </RadioGroup>
-            ) : question.type === 'identification' ? (
+            ) : (
               <TextField
+                fullWidth
                 label="Your Answer"
                 value={selectedAnswer}
                 onChange={(e) => setSelectedAnswer(e.target.value)}
-                fullWidth
-                margin="normal"
               />
-            ) : null}
+            )}
 
-            <Button variant="contained" onClick={checkAnswer} sx={{ mt: 3 }}>Submit Answer</Button>
-            <Button variant="contained" onClick={next} sx={{ mt: 3, ml: 2 }} disabled={!lock}>Next</Button>
-
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="body2">{index + 1} of {selectedQuiz.questions.length} questions</Typography>
-              <Typography variant="body2">Time Spent: {timeSpent} seconds</Typography>
-            </Box>
+            <Button variant="contained" onClick={validateAnswer} sx={{ mt: 3 }}>
+              Submit Answer
+            </Button>
+            <Button
+              variant="contained"
+              onClick={goToNextQuestion}
+              sx={{ mt: 3, ml: 2 }}
+              disabled={!isLocked}
+            >
+              Next Question
+            </Button>
           </Box>
         )}
       </Paper>
