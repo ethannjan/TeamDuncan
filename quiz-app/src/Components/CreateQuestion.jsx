@@ -404,66 +404,76 @@ const CreateQuestion = () => {
             </Typography>
             
             {questions.map((question, index) => (
-             <Accordion key={question.id}>
-             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-               <Typography>
-                 {editingQuestion?.id === question.id
-                   ? 'Editing: '
-                   : `Question ${index + 1}: `}
-                 {question.questionText}
-               </Typography>
-             </AccordionSummary>
-             <AccordionDetails>
-               {editingQuestion?.id === question.id ? (
-                 <Grid container spacing={2}>
-                   {/* Question Text Input */}
-                   <Grid item xs={12}>
-                     <TextField
-                       label="Question Text"
-                       variant="outlined"
-                       fullWidth
-                       value={editingQuestion.questionText}
-                       onChange={(e) =>
-                         setEditingQuestion({
-                           ...editingQuestion,
-                           questionText: e.target.value,
-                         })
-                       }
-                     />
-                   </Grid>
-           
-                   {/* Options Inputs */}
-                   {editingQuestion.options.map((option, optIndex) => (
-                     <Grid item xs={12} md={6} key={optIndex}>
-                       <TextField
-                         label={`Option ${optIndex + 1}`}
-                         variant="outlined"
-                         fullWidth
-                         value={option}
-                         onChange={(e) => {
-                           const updatedOptions = [...editingQuestion.options];
-                           updatedOptions[optIndex] = e.target.value;
-                           setEditingQuestion({ ...editingQuestion, options: updatedOptions });
-                         }}
-                       />
-                     </Grid>
-                   ))}
-           
-                   {/* Correct Answer Input */}
-                   <Grid item xs={12}>
-                     <TextField
-                       label="Answer (index of correct option)"
-                       variant="outlined"
-                       fullWidth
-                       value={editingQuestion.answer}
-                       onChange={(e) =>
-                         setEditingQuestion({
-                           ...editingQuestion,
-                           answer: e.target.value,
-                         })
-                       }
-                     />
-                   </Grid>
+    <Accordion key={question.id}>
+      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+        <Typography>
+          {editingQuestion?.id === question.id
+            ? 'Editing: '
+            : `Question ${index + 1}: `}
+          {question.questionText}
+        </Typography>
+      </AccordionSummary>
+      <AccordionDetails>
+        {editingQuestion?.id === question.id ? (
+          <Grid container spacing={2}>
+            {/* Question Text Input */}
+            <Grid item xs={12}>
+              <TextField
+                label="Question Text"
+                variant="outlined"
+                fullWidth
+                value={editingQuestion.questionText}
+                onChange={(e) =>
+                  setEditingQuestion({
+                    ...editingQuestion,
+                    questionText: e.target.value,
+                  })
+                }
+              />
+            </Grid>
+
+            {/* Options Inputs */}
+            {editingQuestion.options.map((option, optIndex) => (
+              <Grid item xs={12} md={6} key={optIndex}>
+                <TextField
+                  label={`Option ${optIndex + 1}`}
+                  variant="outlined"
+                  fullWidth
+                  value={option}
+                  onChange={(e) => {
+                    const updatedOptions = [...editingQuestion.options];
+                    updatedOptions[optIndex] = e.target.value;
+                    setEditingQuestion({
+                      ...editingQuestion,
+                      options: updatedOptions,
+                    });
+                  }}
+                />
+              </Grid>
+            ))}
+
+            {/* Radio Buttons for Correct Answer */}
+            {editingQuestion.options.map((option, optIndex) => (
+              <Grid item xs={12} key={`radio-${optIndex}`}>
+                <FormControlLabel
+                  control={
+                    <Radio
+                      checked={editingQuestion.answer === optIndex.toString()}
+                      onChange={() =>
+                        setEditingQuestion({
+                          ...editingQuestion,
+                          answer: optIndex.toString(),
+                        })
+                      }
+                      value={optIndex.toString()}
+                      name="answer"
+                      color="primary"
+                    />
+                  }
+                  label={`Option ${optIndex + 1}`}
+                />
+              </Grid>
+            ))}
            
                    {/* Save/Cancel Buttons */}
                    <Grid item xs={12}>
