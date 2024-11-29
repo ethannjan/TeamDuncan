@@ -30,6 +30,8 @@ const CreateQuestion = () => {
   const [modules, setModules] = useState([]);
   const [selectedModule, setSelectedModule] = useState('');
   const [newModuleName, setNewModuleName] = useState('');
+  const [editingQuestion, setEditingQuestion] = useState(null);
+
   const [questions, setQuestions] = useState([]);
   const [newQuestion, setNewQuestion] = useState({
     questionText: '',
@@ -43,6 +45,50 @@ const CreateQuestion = () => {
   const modulesCollection = collection(db, 'modules');
   const questionsCollection = collection(db, 'questions');
 
+  const startEditingQuestion = (question) => {
+    setEditingQuestion({ ...question }); // Clone the question to avoid direct state mutation.
+  };
+
+  const cancelEditing = () => {
+    setEditingQuestion(null);
+  };
+
+  const updateQuestion = async () => {
+    if (!editingQuestion.questionText.trim()) {
+      setError('Please enter a valid question text.');
+      return;
+    }
+    if (editingQuestion.options.some((option) => !option.trim())) {
+      setError('All options must be filled.');
+      return;
+    }
+    if (isNaN(editingQuestion.answer) || editingQuestion.answer < 0 || editingQuestion.answer >= editingQuestion.options.length) {
+      setError('Please enter a valid answer index.');
+      return;
+    }
+  
+    try {
+      const questionDoc = doc(db, 'questions', editingQuestion.id);
+      await updateDoc(questionDoc, {
+        questionText: editingQuestion.questionText,
+        options: editingQuestion.options,
+        answer: editingQuestion.answer,
+      });
+  
+      setQuestions((prevQuestions) =>
+        prevQuestions.map((q) =>
+          q.id === editingQuestion.id ? editingQuestion : q
+        )
+      );
+      cancelEditing();
+    } catch (error) {
+      console.error('Error updating question:', error);
+      setError('Failed to update question.');
+    }
+  };
+  
+  
+  
   useEffect(() => {
     fetchModules();
   }, []);
@@ -346,32 +392,122 @@ const CreateQuestion = () => {
             </Typography>
             
             {questions.map((question, index) => (
-              <Accordion key={question.id}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography>Question {index + 1}: {question.questionText}</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Grid container spacing={2}>
-                    {question.options.map((option, optIndex) => (
-                      <Grid item xs={12} key={optIndex}>
-                        <Typography color={optIndex === parseInt(question.answer) ? 'success.main' : 'inherit'}>
-                          Option {optIndex + 1}: {option}
-                        </Typography>
-                      </Grid>
-                    ))}
-                    <Grid item xs={12}>
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        startIcon={<DeleteIcon />}
-                        onClick={() => deleteQuestion(question.id)}
-                      >
-                        Delete Question
-                      </Button>
-                    </Grid>
-                  </Grid>
-                </AccordionDetails>
-              </Accordion>
+             <Accordion key={question.id}>
+             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+               <Typography>
+                 {editingQuestion?.id === question.id
+                   ? 'Editing: '
+                   : `Question ${index + 1}: `}
+                 {question.questionText}
+               </Typography>
+             </AccordionSummary>
+             <AccordionDetails>
+               {editingQuestion?.id === question.id ? (
+                 <Grid container spacing={2}>
+                   {/* Question Text Input */}
+                   <Grid item xs={12}>
+                     <TextField
+                       label="Question Text"
+                       variant="outlined"
+                       fullWidth
+                       value={editingQuestion.questionText}
+                       onChange={(e) =>
+                         setEditingQuestion({
+                           ...editingQuestion,
+                           questionText: e.target.value,
+                         })
+                       }
+                     />
+                   </Grid>
+           
+                   {/* Options Inputs */}
+                   {editingQuestion.options.map((option, optIndex) => (
+                     <Grid item xs={12} md={6} key={optIndex}>
+                       <TextField
+                         label={`Option ${optIndex + 1}`}
+                         variant="outlined"
+                         fullWidth
+                         value={option}
+                         onChange={(e) => {
+                           const updatedOptions = [...editingQuestion.options];
+                           updatedOptions[optIndex] = e.target.value;
+                           setEditingQuestion({ ...editingQuestion, options: updatedOptions });
+                         }}
+                       />
+                     </Grid>
+                   ))}
+           
+                   {/* Correct Answer Input */}
+                   <Grid item xs={12}>
+                     <TextField
+                       label="Answer (index of correct option)"
+                       variant="outlined"
+                       fullWidth
+                       value={editingQuestion.answer}
+                       onChange={(e) =>
+                         setEditingQuestion({
+                           ...editingQuestion,
+                           answer: e.target.value,
+                         })
+                       }
+                     />
+                   </Grid>
+           
+                   {/* Save/Cancel Buttons */}
+                   <Grid item xs={12}>
+                     <Button
+                       variant="contained"
+                       color="primary"
+                       onClick={updateQuestion}
+                       sx={{ mr: 2 }}
+                     >
+                       Save
+                     </Button>
+                     <Button
+                       variant="outlined"
+                       color="secondary"
+                       onClick={cancelEditing}
+                     >
+                       Cancel
+                     </Button>
+                   </Grid>
+                 </Grid>
+               ) : (
+                 <>
+                   {/* Display Question */}
+                   <Grid container spacing={2}>
+                     {question.options.map((option, optIndex) => (
+                       <Grid item xs={12} key={optIndex}>
+                         <Typography
+                           color={optIndex === parseInt(question.answer) ? 'success.main' : 'inherit'}
+                         >
+                           Option {optIndex + 1}: {option}
+                         </Typography>
+                       </Grid>
+                     ))}
+                     <Grid item xs={12}>
+                       {/* Edit Button */}
+                       <Button
+                         variant="contained"
+                         color="primary"
+                         onClick={() => startEditingQuestion(question)}
+                         sx={{ mr: 2 }}
+                       >
+                         Edit
+                       </Button>
+                       <Button
+                         variant="outlined"
+                         color="error"
+                         onClick={() => deleteQuestion(question.id)}
+                       >
+                         Delete
+                       </Button>
+                     </Grid>
+                   </Grid>
+                 </>
+               )}
+             </AccordionDetails>
+           </Accordion>
             ))}
           </Paper>
         </>
