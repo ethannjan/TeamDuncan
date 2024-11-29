@@ -1,10 +1,11 @@
-// src/components/LeaderboardPage.jsx
 import React, { useEffect, useState } from 'react';
-import { Container, Typography, Paper, List, ListItem, ListItemText, Divider } from '@mui/material';
+import { Container, Typography, Paper, List, ListItem, ListItemText, Divider, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import { useLocation } from 'react-router-dom';
 
 const LeaderboardPage = () => {
   const [topScores, setTopScores] = useState([]);
+  const [modules, setModules] = useState([]);
+  const [selectedModule, setSelectedModule] = useState('');
   const location = useLocation();
 
   // Retrieve the user's latest score and email passed via location state
@@ -14,10 +15,31 @@ const LeaderboardPage = () => {
   useEffect(() => {
     // Fetch scores from local storage
     const scores = JSON.parse(localStorage.getItem('leaderboardScores')) || [];
-    // Sort scores in descending order
-    const sortedScores = scores.sort((a, b) => b.score - a.score);
-    setTopScores(sortedScores);
+    const uniqueModules = [
+      ...new Set(scores.map((entry) => entry.module)),
+    ]; // Extract unique module names
+    setModules(uniqueModules);
+
+    // Initially, display scores for the first module if available
+    if (uniqueModules.length > 0) {
+      setSelectedModule(uniqueModules[0]);
+    }
   }, []);
+
+  useEffect(() => {
+    if (selectedModule) {
+      // Filter and sort scores by the selected module
+      const scores = JSON.parse(localStorage.getItem('leaderboardScores')) || [];
+      const filteredScores = scores
+        .filter((entry) => entry.module === selectedModule)
+        .sort((a, b) => b.score - a.score); // Sort by descending score
+      setTopScores(filteredScores);
+    }
+  }, [selectedModule]);
+
+  const handleModuleChange = (event) => {
+    setSelectedModule(event.target.value);
+  };
 
   return (
     <Container maxWidth="sm" sx={{ mt: 4 }}>
@@ -31,6 +53,22 @@ const LeaderboardPage = () => {
         <Typography variant="subtitle1" color="textSecondary">
           {latestEmail}
         </Typography>
+
+        <FormControl fullWidth sx={{ mt: 2, mb: 2 }}>
+          <InputLabel>Select Module</InputLabel>
+          <Select
+            value={selectedModule}
+            onChange={handleModuleChange}
+            label="Select Module"
+          >
+            {modules.map((module, index) => (
+              <MenuItem key={index} value={module}>
+                {module}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
         <List>
           {topScores.length > 0 ? (
             topScores.map((entry, index) => (
@@ -44,7 +82,10 @@ const LeaderboardPage = () => {
                           {entry.email}
                         </Typography>
                         <Typography variant="body2">
-                          Score: {entry.score}
+                          Score: {entry.score} / {entry.totalQuestions}
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          {new Date(entry.date).toLocaleString()}
                         </Typography>
                       </>
                     }
@@ -55,7 +96,7 @@ const LeaderboardPage = () => {
             ))
           ) : (
             <Typography variant="body2" color="textSecondary">
-              No scores available. Take the quiz to add your score!
+              No scores available for this module. Take the quiz to add your score!
             </Typography>
           )}
         </List>
