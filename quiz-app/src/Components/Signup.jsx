@@ -17,9 +17,12 @@ import {
   Select,
   MenuItem,
   Link,
-  Alert
+  Alert,
+  IconButton
 } from '@mui/material';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 const Signup = () => {
   const [email, setEmail] = useState('');
@@ -28,6 +31,8 @@ const Signup = () => {
   const [role, setRole] = useState('student');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);  // State to toggle password visibility
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);  // State for confirm password visibility
   const navigate = useNavigate();
 
   const handleSignup = async (e) => {
@@ -123,12 +128,22 @@ const Signup = () => {
               fullWidth
               name="password"
               label="Password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}  // Toggle password visibility
               id="password"
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               error={Boolean(error && error.includes('Password'))}
+              InputProps={{
+                endAdornment: (
+                  <IconButton
+                    onClick={() => setShowPassword((prev) => !prev)}  // Toggle password visibility
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                ),
+              }}
             />
 
             <TextField
@@ -137,13 +152,23 @@ const Signup = () => {
               fullWidth
               name="confirmPassword"
               label="Confirm Password"
-              type="password"
+              type={showConfirmPassword ? 'text' : 'password'}  // Toggle confirm password visibility
               id="confirmPassword"
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               error={Boolean(error && error.includes('match'))}
               sx={{ mb: 2 }}
+              InputProps={{
+                endAdornment: (
+                  <IconButton
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}  // Toggle confirm password visibility
+                    edge="end"
+                  >
+                    {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                ),
+              }}
             />
 
             <FormControl fullWidth required sx={{ mb: 3 }}>
