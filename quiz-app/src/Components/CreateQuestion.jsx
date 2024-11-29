@@ -19,6 +19,9 @@ import {
   AccordionSummary,
   AccordionDetails,
   Divider,
+  Radio, 
+  RadioGroup,
+   FormControlLabel
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -305,53 +308,62 @@ const CreateQuestion = () => {
             </Typography>
 
             <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  label="Question Text"
-                  variant="outlined"
-                  fullWidth
-                  value={newQuestion.questionText}
-                  onChange={(e) => setNewQuestion({ ...newQuestion, questionText: e.target.value })}
-                />
-              </Grid>
+  <Grid item xs={12}>
+    <TextField
+      label="Question Text"
+      variant="outlined"
+      fullWidth
+      value={newQuestion.questionText}
+      onChange={(e) => setNewQuestion({ ...newQuestion, questionText: e.target.value })}
+    />
+  </Grid>
 
-              {newQuestion.options.map((option, index) => (
-                <Grid item xs={12} md={6} key={index}>
-                  <TextField
-                    label={`Option ${index + 1}`}
-                    variant="outlined"
-                    fullWidth
-                    value={option}
-                    onChange={(e) => {
-                      const updatedOptions = [...newQuestion.options];
-                      updatedOptions[index] = e.target.value;
-                      setNewQuestion({ ...newQuestion, options: updatedOptions });
-                    }}
-                  />
-                </Grid>
-              ))}
+  {newQuestion.options.map((option, index) => (
+    <Grid item xs={12} md={6} key={index}>
+      <TextField
+        label={`Option ${index + 1}`}
+        variant="outlined"
+        fullWidth
+        value={option}
+        onChange={(e) => {
+          const updatedOptions = [...newQuestion.options];
+          updatedOptions[index] = e.target.value;
+          setNewQuestion({ ...newQuestion, options: updatedOptions });
+        }}
+      />
+    </Grid>
+  ))}
 
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Answer (index of correct option)"
-                  variant="outlined"
-                  fullWidth
-                  value={newQuestion.answer}
-                  onChange={(e) => setNewQuestion({ ...newQuestion, answer: e.target.value })}
-                />
-              </Grid>
+  <Grid item xs={12}>
+    <Typography variant="subtitle1" gutterBottom>
+      Select the correct answer:
+    </Typography>
+    <RadioGroup
+      value={newQuestion.answer}
+      onChange={(e) => setNewQuestion({ ...newQuestion, answer: e.target.value })}
+    >
+      {newQuestion.options.map((option, index) => (
+        <FormControlLabel
+          key={index}
+          value={index.toString()}
+          control={<Radio />}
+          label={`Option ${index + 1}`}
+        />
+      ))}
+    </RadioGroup>
+  </Grid>
 
-              <Grid item xs={12}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  startIcon={<AddIcon />}
-                  onClick={addQuestion}
-                >
-                  Add Question
-                </Button>
-              </Grid>
-            </Grid>
+  <Grid item xs={12}>
+    <Button
+      variant="contained"
+      color="primary"
+      startIcon={<AddIcon />}
+      onClick={addQuestion}
+    >
+      Add Question
+    </Button>
+  </Grid>
+</Grid>
           </Paper>
 
           {/* Timer Setting Section */}
