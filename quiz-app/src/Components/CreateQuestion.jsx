@@ -44,6 +44,8 @@ const CreateQuestion = () => {
   });
   const [quizTime, setQuizTime] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(''); // New state for success messages
+
 
   const modulesCollection = collection(db, 'modules');
   const questionsCollection = collection(db, 'questions');
@@ -84,6 +86,7 @@ const CreateQuestion = () => {
         )
       );
       cancelEditing();
+      setSuccess('Question updated successfully!'); // Add success message
     } catch (error) {
       console.error('Error updating question:', error);
       setError('Failed to update question.');
@@ -208,6 +211,7 @@ const CreateQuestion = () => {
     try {
       await deleteDoc(doc(db, 'questions', questionId));
       setQuestions(questions.filter((q) => q.id !== questionId));
+      setSuccess('Question deleted successfully!'); // Add success message
     } catch (error) {
       console.error('Error deleting question:', error);
       setError('Failed to delete question');
@@ -542,6 +546,17 @@ const CreateQuestion = () => {
       >
         <Alert severity="error" onClose={() => setError('')}>
           {error}
+        </Alert>
+      </Snackbar>
+
+       {/* Success Snackbar */}
+       <Snackbar
+        open={Boolean(success)}
+        autoHideDuration={4000}
+        onClose={() => setSuccess('')}
+      >
+        <Alert severity="success" onClose={() => setSuccess('')}>
+          {success}
         </Alert>
       </Snackbar>
     </Container>
