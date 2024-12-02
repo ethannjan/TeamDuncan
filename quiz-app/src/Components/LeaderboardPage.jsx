@@ -1,105 +1,90 @@
-import React, { useEffect, useState } from 'react';
-import { Container, Typography, Paper, List, ListItem, ListItemText, Divider, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { 
+  Container, 
+  Typography, 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableContainer, 
+  TableHead, 
+  TableRow, 
+  Paper,
+  Box
+} from '@mui/material';
+import LeaderboardIcon from '@mui/icons-material/Leaderboard';
 import { useLocation } from 'react-router-dom';
 
 const LeaderboardPage = () => {
-  const [topScores, setTopScores] = useState([]);
-  const [modules, setModules] = useState([]);
-  const [selectedModule, setSelectedModule] = useState('');
+  const [moduleScores, setModuleScores] = useState([]);
+  const [moduleInfo, setModuleInfo] = useState(null);
   const location = useLocation();
 
-  // Retrieve the user's latest score and email passed via location state
-  const latestScore = location.state?.score;
-  const latestEmail = location.state?.email;
-
   useEffect(() => {
-    // Fetch scores from local storage
-    const scores = JSON.parse(localStorage.getItem('leaderboardScores')) || [];
-    const uniqueModules = [
-      ...new Set(scores.map((entry) => entry.module)),
-    ]; // Extract unique module names
-    setModules(uniqueModules);
+    // Retrieve module info passed through state or from URL
+    const moduleData = location.state || {};
+    const { moduleName, moduleId } = moduleData;
 
-    // Initially, display scores for the first module if available
-    if (uniqueModules.length > 0) {
-      setSelectedModule(uniqueModules[0]);
-    }
-  }, []);
+    // Retrieve all leaderboard scores from localStorage
+    const storedScores = JSON.parse(localStorage.getItem('leaderboardScores')) || [];
+    
+    // Filter scores for the specific module
+    const filteredScores = storedScores.filter(score => 
+      score.module === moduleName
+    );
 
-  useEffect(() => {
-    if (selectedModule) {
-      // Filter and sort scores by the selected module
-      const scores = JSON.parse(localStorage.getItem('leaderboardScores')) || [];
-      const filteredScores = scores
-        .filter((entry) => entry.module === selectedModule)
-        .sort((a, b) => b.score - a.score); // Sort by descending score
-      setTopScores(filteredScores);
-    }
-  }, [selectedModule]);
+    // Sort scores in descending order
+    const sortedScores = filteredScores.sort((a, b) => {
+      return b.score - a.score;
+    });
 
-  const handleModuleChange = (event) => {
-    setSelectedModule(event.target.value);
-  };
+    setModuleScores(sortedScores);
+    setModuleInfo({ moduleName, moduleId });
+  }, [location.state]);
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 4 }}>
+    <Container maxWidth="md" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: 3 }}>
-        <Typography variant="h5" component="h2" gutterBottom>
-          Leaderboard
-        </Typography>
-        <Typography variant="h6" color="primary" gutterBottom>
-          Your Latest Score: {latestScore}
-        </Typography>
-        <Typography variant="subtitle1" color="textSecondary">
-          {latestEmail}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+          <LeaderboardIcon color="primary" sx={{ fontSize: 40 }} />
+          <Typography variant="h4">
+            {moduleInfo?.moduleName || 'Module'} Leaderboard
+          </Typography>
+        </Box>
 
-        <FormControl fullWidth sx={{ mt: 2, mb: 2 }}>
-          <InputLabel>Select Module</InputLabel>
-          <Select
-            value={selectedModule}
-            onChange={handleModuleChange}
-            label="Select Module"
-          >
-            {modules.map((module, index) => (
-              <MenuItem key={index} value={module}>
-                {module}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <List>
-          {topScores.length > 0 ? (
-            topScores.map((entry, index) => (
-              <React.Fragment key={index}>
-                <ListItem>
-                  <ListItemText
-                    primary={`Rank ${index + 1}`}
-                    secondary={
-                      <>
-                        <Typography variant="body2" color="textSecondary">
-                          {entry.email}
-                        </Typography>
-                        <Typography variant="body2">
-                          Score: {entry.score} / {entry.totalQuestions}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary">
-                          {new Date(entry.date).toLocaleString()}
-                        </Typography>
-                      </>
-                    }
-                  />
-                </ListItem>
-                {index < topScores.length - 1 && <Divider />}
-              </React.Fragment>
-            ))
-          ) : (
-            <Typography variant="body2" color="textSecondary">
-              No scores available for this module. Take the quiz to add your score!
-            </Typography>
-          )}
-        </List>
+        {moduleScores.length === 0 ? (
+          <Typography variant="body1" align="center">
+            No scores for this module yet.
+          </Typography>
+        ) : (
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Rank</TableCell>
+                  <TableCell>Email</TableCell>
+                  <TableCell align="right">Score</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {moduleScores.map((entry, index) => (
+                  <TableRow 
+                    key={index} 
+                    sx={{ 
+                      '&:last-child td, &:last-child th': { border: 0 },
+                      backgroundColor: index === 0 ? '#f0f4f8' : 'transparent'
+                    }}
+                  >
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{entry.email}</TableCell>
+                    <TableCell align="right">
+                      {entry.score} / {entry.totalQuestions}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
       </Paper>
     </Container>
   );
