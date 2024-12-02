@@ -76,12 +76,16 @@ const AnswerQuestions = () => {
         const q = query(questionsCollection, where('moduleId', '==', selectedModule));
         const querySnapshot = await getDocs(q);
         const fetchedQuestions = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+    
+        // Shuffle the questions
+        shuffleArray(fetchedQuestions);
+    
         setQuestions(fetchedQuestions);
-        
+    
         if (fetchedQuestions.length > 0 && fetchedQuestions[0].timeLimit) {
           setTimeLeft(fetchedQuestions[0].timeLimit * 60);
         }
-        
+    
         setLoading(false);
       } catch (err) {
         console.error("Failed to load questions:", err);
@@ -129,6 +133,13 @@ const AnswerQuestions = () => {
 
   const startQuiz = () => {
     setQuizStarted(true);
+  };
+
+  const shuffleArray = (array) => {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
   };
 
   const handleAnswerChange = (questionId, answer) => {
