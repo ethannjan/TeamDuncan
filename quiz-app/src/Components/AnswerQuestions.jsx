@@ -41,7 +41,6 @@ const AnswerQuestions = () => {
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [reviewMode, setReviewMode] = useState(false);
   const [score, setScore] = useState(0);
-  const [rank, setRank] = useState(null);
   const navigate = useNavigate();
 
   const auth = getAuth();
@@ -149,8 +148,6 @@ const AnswerQuestions = () => {
 
   const handleSubmit = () => {
     let calculatedScore = 0;
-
-    // Calculate the score
     questions.forEach((q) => {
       if (answers[q.id] === parseInt(q.answer, 10)) {
         calculatedScore += 1;
@@ -160,23 +157,14 @@ const AnswerQuestions = () => {
 
     const scores = JSON.parse(localStorage.getItem('leaderboardScores')) || [];
     const selectedModuleName = modules.find(m => m.id === selectedModule)?.name || 'Unknown Module';
-    const newScore = {
-      email: userEmail,
+    scores.push({ 
+      email: userEmail, 
       score: calculatedScore,
       totalQuestions: questions.length,
       module: selectedModuleName,
       date: new Date().toISOString()
-    };
-
-    // Add new score to leaderboard
-    scores.push(newScore);
+    });
     localStorage.setItem('leaderboardScores', JSON.stringify(scores));
-
-    // Calculate rank for the current module
-    const moduleScores = scores.filter(s => s.module === selectedModuleName);
-    moduleScores.sort((a, b) => b.score - a.score || new Date(a.date) - new Date(b.date));
-    const newRank = moduleScores.findIndex(s => s.email === userEmail) + 1;
-    setRank(newRank);
 
     setQuizSubmitted(true);
     setReviewMode(true);
@@ -267,17 +255,20 @@ const AnswerQuestions = () => {
       <Container maxWidth="md" sx={{ mt: 4 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-            <FolderIcon color="primary" />
-            <Typography variant="h5">Select a Module</Typography>
+            <FolderIcon color="primary" sx={{ fontSize: 40 }} />
+            <Typography variant="h4">
+              Select a Module
+            </Typography>
           </Box>
           
-          <FormControl fullWidth>
-            <InputLabel>Select Module</InputLabel>
+          <FormControl fullWidth sx={{ mb: 4 }}>
+            <InputLabel>Choose Module</InputLabel>
             <Select
               value={selectedModule}
               onChange={handleModuleSelect}
+              label="Choose Module"
             >
-              {modules.map(module => (
+              {modules.map((module) => (
                 <MenuItem key={module.id} value={module.id}>
                   {module.name}
                 </MenuItem>
@@ -298,15 +289,10 @@ const AnswerQuestions = () => {
             <Typography variant="h5" sx={{ color: 'primary.main' }}>
               Score: {score} out of {questions.length} ({Math.round(score/questions.length * 100)}%)
             </Typography>
-            {rank && (
-              <Typography variant="h6" sx={{ mt: 2 }}>
-                Your Rank: {rank} in {modules.find(m => m.id === selectedModule)?.name}
-              </Typography>
-            )}
           </Box>
           
           <Divider sx={{ mb: 4 }} />
-
+          
           {questions.map((question, index) => (
             <QuestionReview 
               key={question.id}
@@ -332,7 +318,6 @@ const AnswerQuestions = () => {
                 setSelectedModule('');
                 setAnswers({});
                 setQuizStarted(false);
-                setRank(null);
               }}
             >
               Take Another Quiz
@@ -343,88 +328,106 @@ const AnswerQuestions = () => {
     );
   }
 
+  if (!quizStarted) {
+    return (
+      <Container maxWidth="md" sx={{ mt: 4 }}>
+        <Paper elevation={3} sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="h4" gutterBottom>
+            Ready to Start the Quiz?
+          </Typography>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Module: {modules.find(m => m.id === selectedModule)?.name}
+          </Typography>
+          <Typography variant="body1" sx={{ mb: 3 }}>
+            You will have {timeLeft / 60} minutes to complete {questions.length} questions.
+          </Typography>
+          <Button
+            variant="contained"
+            size="large"
+            onClick={startQuiz}
+            sx={{ minWidth: 200 }}
+          >
+            Start Quiz
+          </Button>
+        </Paper>
+      </Container>
+    );
+  }
+
+  const isAllAnswered = questions.length > 0 && 
+    questions.every(q => answers[q.id] !== undefined);
+
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: 3 }}>
-        <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <QuizIcon color="primary" />
-          <Typography variant="h5">Answer Questions</Typography>
-        </Box>
-        
-        <Divider sx={{ mb: 3 }} />
-
-        {quizStarted ? (
-          <Box>
-            {timeLeft !== null && (
-              <Box sx={{ mb: 3 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <TimerIcon />
-                  <Typography variant="h6">
-                    Time Remaining: {formatTime(timeLeft)}
-                  </Typography>
-                </Box>
-                {timeWarning && (
-                  <Typography variant="body2" color="error">
-                    Less than 1 minute remaining!
-                  </Typography>
-                )}
-              </Box>
-            )}
-            
-            {questions.map((question, index) => (
-              <Card key={question.id} sx={{ mb: 2 }}>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    Question {index + 1}:
-                  </Typography>
-                  <Typography sx={{ mb: 2 }}>
-                    {question.questionText}
-                  </Typography>
-                  <FormControl component="fieldset">
-                    <RadioGroup
-                      value={answers[question.id] || ''}
-                      onChange={(e) => handleAnswerChange(question.id, parseInt(e.target.value, 10))}
-                    >
-                      {question.options.map((option, optIndex) => (
-                        <FormControlLabel
-                          key={optIndex}
-                          value={optIndex}
-                          control={<Radio />}
-                          label={option}
-                        />
-                      ))}
-                    </RadioGroup>
-                  </FormControl>
-                </CardContent>
-              </Card>
-            ))}
-            
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-              <Button
-                variant="contained"
-                color="primary"
-                disabled={Object.keys(answers).length !== questions.length}
-                onClick={handleSubmit}
-              >
-                Submit Quiz
-              </Button>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <QuizIcon color="primary" sx={{ fontSize: 40 }} />
+            <Box>
+              <Typography variant="h4">Quiz Time</Typography>
+              <Typography variant="subtitle1" color="text.secondary">
+                {modules.find(m => m.id === selectedModule)?.name}
+              </Typography>
             </Box>
           </Box>
-        ) : (
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="h6" gutterBottom>
-              Start Quiz for {modules.find(m => m.id === selectedModule)?.name}
-            </Typography>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={startQuiz}
-              sx={{ mt: 2 }}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <TimerIcon color={timeWarning ? "error" : "primary"} />
+            <Typography 
+              variant="h5" 
+              color={timeWarning ? "error" : "primary"}
+              sx={{ fontFamily: 'monospace' }}
             >
-              Start Quiz
-            </Button>
+              {formatTime(timeLeft)}
+            </Typography>
           </Box>
+        </Box>
+
+        {timeWarning && (
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            Less than 1 minute remaining!
+          </Alert>
         )}
+
+        <Divider sx={{ mb: 3 }} />
+
+        {questions.map((q, index) => (
+          <Card key={q.id} sx={{ mb: 3, backgroundColor: '#f8f9fa' }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Question {index + 1}:
+              </Typography>
+              <Typography variant="body1" gutterBottom>
+                {q.questionText}
+              </Typography>
+              
+              <RadioGroup
+                value={answers[q.id] ?? ''}
+                onChange={(e) => handleAnswerChange(q.id, parseInt(e.target.value, 10))}
+              >
+                {q.options.map((option, index) => (
+                  <FormControlLabel
+                    key={index}
+                    value={index}
+                    control={<Radio />}
+                    label={option}
+                  />
+                ))}
+              </RadioGroup>
+            </CardContent>
+          </Card>
+        ))}
+
+        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+          <Button
+            variant="contained"
+            size="large"
+            onClick={handleSubmit}
+            disabled={!isAllAnswered}
+            sx={{ minWidth: 200 }}
+          >
+            Submit Quiz
+          </Button>
+        </Box>
       </Paper>
     </Container>
   );
