@@ -27,6 +27,7 @@ import FolderIcon from '@mui/icons-material/Folder';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { useNavigate } from 'react-router-dom';
+import LogoutButton from './LogoutButton'; 
 
 const AnswerQuestions = () => {
   const [modules, setModules] = useState([]);
@@ -266,11 +267,15 @@ const AnswerQuestions = () => {
     return (
       <Container maxWidth="md" sx={{ mt: 4 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <FolderIcon color="primary" />
             <Typography variant="h5">Select a Module</Typography>
           </Box>
-          
+          <LogoutButton />
+        </Box>
+
+
           <FormControl fullWidth>
             <InputLabel>Select Module</InputLabel>
             <Select
@@ -293,17 +298,23 @@ const AnswerQuestions = () => {
     return (
       <Container maxWidth="md" sx={{ py: 4 }}>
         <Paper elevation={3} sx={{ p: 3 }}>
-          <Box sx={{ mb: 4, textAlign: 'center' }}>
-            <Typography variant="h4" gutterBottom>Quiz Results</Typography>
-            <Typography variant="h5" sx={{ color: 'primary.main' }}>
-              Score: {score} out of {questions.length} ({Math.round(score/questions.length * 100)}%)
-            </Typography>
-            {rank && (
-              <Typography variant="h6" sx={{ mt: 2 }}>
-                Your Rank: {rank} in {modules.find(m => m.id === selectedModule)?.name}
-              </Typography>
-            )}
-          </Box>
+        <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
+      Quiz Results
+    </Typography>
+    <LogoutButton /> {/* This will appear on the right side */}
+  </Box>
+  
+  <Box sx={{ textAlign: 'center' }}>
+    <Typography variant="h5" sx={{ color: 'primary.main', fontWeight: 500 }}>
+      Score: {score} out of {questions.length} ({Math.round((score / questions.length) * 100)}%)
+    </Typography>
+    {rank && (
+      <Typography variant="h6" sx={{ mt: 2, fontWeight: 400 }}>
+        Your Rank: {rank} in {modules.find(m => m.id === selectedModule)?.name}
+      </Typography>
+    )}
+  </Box>
           
           <Divider sx={{ mb: 4 }} />
 
@@ -346,10 +357,13 @@ const AnswerQuestions = () => {
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
       <Paper elevation={3} sx={{ p: 3 }}>
-        <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <QuizIcon color="primary" />
           <Typography variant="h5">Answer Questions</Typography>
         </Box>
+        <LogoutButton />
+      </Box>
         
         <Divider sx={{ mb: 3 }} />
 

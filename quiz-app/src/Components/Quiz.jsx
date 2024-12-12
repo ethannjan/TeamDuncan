@@ -128,6 +128,7 @@ const Quiz = () => {
           <div className="timer">Time Left: {timeLeft} seconds</div>
         </>
       )}
+      
     </div>
   );
 };
